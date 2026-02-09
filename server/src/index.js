@@ -3,20 +3,24 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
-const app = express(); // ✅ ПЕРЕНЕСЛИ ВВЕРХ
+const app = express(); // ✅ ВСЕГДА СРАЗУ
+
+// middleware
+app.use(cors());
+app.use(express.json());
 
 // отдаём фронтенд
 app.use(express.static(path.join(__dirname, '../../public')));
-
-const Video = require('./models/Video');
 
 app.use((req, res, next) => {
   console.log('REQ:', req.method, req.url);
   next();
 });
-app.use(cors());
-app.use(express.json());
 
+// модели
+const Video = require('./models/Video');
+
+// mongo
 const MONGO_URL = 'mongodb://127.0.0.1:27017/video_db';
 
 mongoose
@@ -24,10 +28,7 @@ mongoose
   .then(() => console.log('MongoDB connected'))
   .catch((e) => console.error('MongoDB error:', e.message));
 
-app.get('/', (req, res) => {
-  res.send('API is running. Try GET /videos');
-});
-
+// routes
 app.get('/videos', async (req, res) => {
   const videos = await Video.find().sort({ createdAt: -1 });
   res.json(videos);
@@ -49,12 +50,13 @@ app.get('/videos/:id/download', async (req, res) => {
     if (!video) return res.status(404).json({ error: 'Video not found' });
 
     const filePath = path.join(__dirname, '..', 'videos', video.fileName);
-    return res.download(filePath, video.fileName, (err) => {
-      if (err) return res.status(404).json({ error: 'File not found on server' });
-    });
+    res.download(filePath);
   } catch (e) {
-    return res.status(400).json({ error: 'Bad id format' });
+    res.status(400).json({ error: 'Bad id format' });
   }
 });
 
-app.listen(3000, () => console.log('Server running on http://localhost:3000'));
+// старт сервера
+app.listen(3000, () => {
+  console.log('Server running on http://localhost:3000');
+});
